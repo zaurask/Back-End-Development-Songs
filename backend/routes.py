@@ -1,3 +1,5 @@
+import bson.json_util
+
 from . import app
 import os
 import json
@@ -33,7 +35,6 @@ if mongodb_username and mongodb_password:
 else:
     url = f"mongodb://{mongodb_service}"
 
-
 print(f"connecting to url: {url}")
 
 try:
@@ -45,9 +46,69 @@ db = client.songs
 db.songs.drop()
 db.songs.insert_many(songs_list)
 
+
 def parse_json(data):
     return json.loads(json_util.dumps(data))
+
 
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+@app.route('/health')
+def health():
+    return {'status': 'OK'}
+
+
+@app.route('/count')
+def count():
+    count = db.songs.count_documents({})
+    return {'count': count}
+
+
+@app.route('/song')
+def songs():
+    songs = db.songs.find({})
+
+    return {"songs": bson.json_util.dumps(songs)}
+
+
+@app.route('/song/<int:song_id>')
+def get_song_by_id(song_id):
+    song = db.songs.find_one({'id': song_id})
+    if song is None:
+        return {"message": "song with id not found"}, 404
+
+    return jsonify(bson.json_util.dumps(song))
+
+@app.route('/song', methods=['POST'])
+def create_song():
+    song_data = request.get_json()
+    if db.songs.find_one({'id': song_data['id']}):
+        return {"Message": f"song with id {song_data['id']} already present"}, 302
+
+    oid = db.songs.insert_one(song_data).inserted_id
+
+    return {"inserted id": {"$oid": str(oid)}}, 201
+
+@app.route('/song/<int:id>', methods=['PUT'])
+def update_song(id):
+    song_data = request.get_json()
+    result = db.songs.update_one({"id": id}, {"$set": song_data})
+
+    if result.matched_count == 0:
+        return {"message": "song not found"}, 404
+    if result.modified_count == 0:
+        return {"message": "song found, but nothing updated"}
+
+    updated_song = db.songs.find_one({'id': id})
+    return bson.json_util.dumps(updated_song)
+
+@app.route('/song/<int:id>', methods=['DELETE'])
+def delete_song(id):
+    result = db.songs.delete_one({'id': id})
+    if result.deleted_count == 0:
+        return {"message": "song not found"}, 404
+    if result.deleted_count == 1:
+        return '', 204
+
+    return {"message": "internal server error"}, 500
