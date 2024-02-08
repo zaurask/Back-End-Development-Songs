@@ -1,5 +1,3 @@
-import bson.json_util
-
 from . import app
 import os
 import json
@@ -69,7 +67,7 @@ def count():
 def songs():
     songs = db.songs.find({})
 
-    return {"songs": bson.json_util.dumps(songs)}
+    return {"songs": json_util.dumps(songs)}
 
 
 @app.route('/song/<int:song_id>')
@@ -78,7 +76,7 @@ def get_song_by_id(song_id):
     if song is None:
         return {"message": "song with id not found"}, 404
 
-    return jsonify(bson.json_util.dumps(song))
+    return jsonify(json_util.dumps(song))
 
 @app.route('/song', methods=['POST'])
 def create_song():
@@ -101,7 +99,7 @@ def update_song(id):
         return {"message": "song found, but nothing updated"}
 
     updated_song = db.songs.find_one({'id': id})
-    return bson.json_util.dumps(updated_song)
+    return json_util.dumps(updated_song)
 
 @app.route('/song/<int:id>', methods=['DELETE'])
 def delete_song(id):
