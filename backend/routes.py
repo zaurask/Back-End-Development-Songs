@@ -64,9 +64,9 @@ def count():
 
 @app.route('/song')
 def songs():
-    songs = db.songs.find({})
+    songs = list(db.songs.find({}))
 
-    return {"songs": json_util.dumps(songs)}
+    return {"songs": parse_json(songs)}
 
 
 @app.route('/song/<int:song_id>')
